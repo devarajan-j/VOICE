@@ -1,0 +1,72 @@
+<!DOCTYPE html><html><head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width,initial-scale=1'>
+<title>VoiceSphere AI</title>
+<style>
+body{margin:0;font-family:Arial;background:#F8FAFC}
+.header{padding:18px;color:#fff;background:linear-gradient(90deg,#4F46E5,#818CF8);text-align:center}
+.container{max-width:1000px;margin:auto;padding:15px}
+.chat{height:65vh;overflow:auto;background:#fff;border-radius:16px;padding:15px;box-shadow:0 4px 20px rgba(0,0,0,.1)}
+.user,.bot{padding:10px;border-radius:12px;margin:8px 0}
+.user{background:#dbeafe;text-align:right}
+.bot{background:#eef2ff}
+.controls{display:flex;gap:8px;margin-top:10px}
+input{flex:1;padding:12px}
+button{padding:12px;border:none;border-radius:10px;cursor:pointer}
+.mic{background:#06B6D4;color:#fff}
+.send{background:#4F46E5;color:#fff}
+.status{margin:8px 0}
+.pulse{animation:pulse 1s infinite}
+@keyframes pulse{50%{transform:scale(1.1)}}
+</style></head><body>
+<div class='header'><h2>VoiceSphere AI Voice Controller</h2></div>
+<div class='container'>
+<div class='status' id='status'>Ready</div>
+<div class='chat' id='chat'></div>
+<div class='controls'>
+<input id='msg' placeholder='Speak or type...'>
+<button class='send' onclick='sendMessage()'>Send</button>
+<button id='mic' class='mic' onclick='startListening()'>🎤 Start</button>
+<button onclick='stopListening()'>Stop</button>
+<button onclick='clearChat()'>Clear</button>
+</div></div>
+<script>
+const chat=document.getElementById('chat');
+function addMessage(text,cls){
+ let d=document.createElement('div');d.className=cls;d.innerText=text;chat.appendChild(d);chat.scrollTop=chat.scrollHeight;
+}
+async function sendMessage(){
+ let m=msg.value;if(!m)return;
+ addMessage('You: '+m,'user');
+ msg.value='';
+ let r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:m})});
+ let d=await r.json();
+ addMessage('AI: '+d.response,'bot');
+ speak(d.response);
+}
+function speak(t){speechSynthesis.speak(new SpeechSynthesisUtterance(t));}
+let rec;
+function startListening(){
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){alert('Not supported');return;}
+ rec=new SR(); rec.continuous=false;
+ status.innerText='Listening...';
+ mic.classList.add('pulse');
+ rec.start();
+ rec.onresult=e=>{
+   let txt=e.results[0][0].transcript;
+   msg.value=txt;
+   handleCommand(txt);
+ };
+ rec.onend=()=>{status.innerText='Ready';mic.classList.remove('pulse');}
+}
+function stopListening(){ if(rec) rec.stop(); speechSynthesis.cancel(); }
+async function handleCommand(t){
+ let x=t.toLowerCase();
+ if(x.includes('open google')) return window.open('https://google.com');
+ if(x.includes('open youtube')) return window.open('https://youtube.com');
+ if(x.includes('open gmail')) return window.open('https://mail.google.com');
+ if(x.includes('clear chat')) return clearChat();
+ sendMessage();
+}
+function clearChat(){ chat.innerHTML=''; }
+</script></body></html>
